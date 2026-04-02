@@ -6,25 +6,22 @@ import (
 	"strconv"
 )
 
-// HandleGetEmails returns the email list with optional query-param filters:
-//
-//	?category=urgent
-//	?min_importance=4
-//	?action_needed=true
-func HandleGetEmails(w http.ResponseWriter, r *http.Request) {
+// HandleGetEmails returns the email list with optional query-param filters
+
+func HandleGetEmails(responseWriter http.ResponseWriter, request *http.Request) {
 	emails := LoadEmails()
 
-	if cat := r.URL.Query().Get("category"); cat != "" {
+	if cat := request.URL.Query().Get("category"); cat != "" {
 		var filtered []Email
-		for _, e := range emails {
-			if e.Category == cat {
-				filtered = append(filtered, e)
+		for _, email := range emails {
+			if email.Category == cat {
+				filtered = append(filtered, email)
 			}
 		}
 		emails = filtered
 	}
 
-	if minStr := r.URL.Query().Get("min_importance"); minStr != "" {
+	if minStr := request.URL.Query().Get("min_importance"); minStr != "" {
 		if minImp, err := strconv.Atoi(minStr); err == nil {
 			var filtered []Email
 			for _, e := range emails {
@@ -36,18 +33,18 @@ func HandleGetEmails(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if r.URL.Query().Get("action_needed") == "true" {
+	if request.URL.Query().Get("action_needed") == "true" {
 		var filtered []Email
-		for _, e := range emails {
-			if e.ActionNeeded {
-				filtered = append(filtered, e)
+		for _, email := range emails {
+			if email.ActionRequired {
+				filtered = append(filtered, email)
 			}
 		}
 		emails = filtered
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(emails)
+	responseWriter.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(responseWriter).Encode(emails)
 }
 
 // HandleGetStats returns aggregate counts for the dashboard header cards.
@@ -58,13 +55,13 @@ func HandleGetStats(w http.ResponseWriter, r *http.Request) {
 		Total:      len(emails),
 		Categories: make(map[string]int),
 	}
-	for _, e := range emails {
-		stats.Categories[e.Category]++
-		if e.Importance >= 4 {
+	for _, email := range emails {
+		stats.Categories[email.Category]++
+		if email.Importance >= 4 {
 			stats.Important++
 		}
-		if e.ActionNeeded {
-			stats.ActionNeeded++
+		if email.ActionRequired {
+			stats.ActionRequired++
 		}
 	}
 

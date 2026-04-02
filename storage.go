@@ -19,7 +19,7 @@ func LoadEmails() []Email {
 	}
 	var emails []Email
 	if err := json.Unmarshal(raw, &emails); err != nil {
-		log.Printf("⚠️  corrupt data file: %v", err)
+		log.Printf("corrupt data file: %v", err)
 		return nil
 	}
 	return emails
@@ -33,14 +33,14 @@ func SaveEmails(newEmails []Email) error {
 	existing := LoadEmails()
 
 	seen := make(map[string]bool)
-	for _, e := range existing {
-		seen[e.UID] = true
+	for _, email := range existing {
+		seen[email.UID] = true
 	}
 
-	for _, e := range newEmails {
-		if !seen[e.UID] {
-			existing = append(existing, e)
-			seen[e.UID] = true
+	for _, email := range newEmails {
+		if !seen[email.UID] {
+			existing = append(existing, email)
+			seen[email.UID] = true
 		}
 	}
 

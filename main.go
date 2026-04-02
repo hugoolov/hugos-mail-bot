@@ -26,10 +26,10 @@ func main() {
 	dashPort := envOr("DASH_PORT", "5000")
 
 	if imapHost == "" || imapUser == "" || imapPass == "" {
-		log.Fatal("❌ Set IMAP_HOST, IMAP_USER, and IMAP_PASS in .env")
+		log.Fatal("Set IMAP_HOST, IMAP_USER, and IMAP_PASS in .env")
 	}
 	if apiKey == "" {
-		log.Fatal("❌ Set ANTHROPIC_API_KEY in .env")
+		log.Fatal("Set ANTHROPIC_API_KEY in .env")
 	}
 
 	// Run the pipeline once immediately on startup, then on a timer
@@ -56,33 +56,33 @@ func main() {
 // runPipeline executes one full fetch → classify → save cycle.
 func runPipeline(host, user, pass, folder string, port, daysBack, limit int, apiKey string) {
 	now := time.Now().Format("2006-01-02 15:04:05")
-	fmt.Printf("\n%s\n⏰ Run started at %s\n%s\n",
+	fmt.Printf("\n%s\nRun started at %s\n%s\n",
 		"============================================================",
 		now,
 		"============================================================")
 
 	emails, err := FetchEmails(host, user, pass, folder, port, daysBack, limit)
 	if err != nil {
-		log.Printf("❌ Fetch error: %v", err)
+		log.Printf("Fetch error: %v", err)
 		return
 	}
 	if len(emails) == 0 {
-		log.Println("📭 No emails to classify")
+		log.Println("No emails to classify")
 		return
 	}
 
 	classified := ClassifyEmails(emails, apiKey)
 	if err := SaveEmails(classified); err != nil {
-		log.Printf("❌ Save error: %v", err)
+		log.Printf("Save error: %v", err)
 		return
 	}
 
-	log.Printf("✅ Done. %d emails processed.", len(classified))
+	log.Printf("Done. %d emails processed.", len(classified))
 }
 
 func envOr(key, fallback string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
+	if envKey := os.Getenv(key); envKey != "" {
+		return envKey
 	}
 	return fallback
 }

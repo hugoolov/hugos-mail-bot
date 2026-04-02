@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"log"
@@ -59,13 +60,20 @@ func FetchEmails(host, user, pass, folder string, port int, daysBack, limit int)
 
 	var emails []Email
 	for {
-		message := fetchCmd.Next()
-		if message == nil {
+		msg := fetchCmd.Next()
+		if msg == nil {
 			break
 		}
-		parsed, err := parseMessage(message)
+
+		buf, err := msg.Collect()
 		if err != nil {
-			log.Printf("   Error parsing email: %s\n, skipping", err)
+			log.Printf("   Error collecting message: %s, skipping\n", err)
+			continue
+		}
+
+		parsed, err := parseMessage(buf)
+		if err != nil {
+			log.Printf("   Error parsing email: %s, skipping\n", err)
 			continue
 		}
 		emails = append(emails, parsed)
@@ -77,16 +85,14 @@ func FetchEmails(host, user, pass, folder string, port int, daysBack, limit int)
 	log.Printf("Parsed %d emails\n", len(emails))
 	return emails, nil
 }
-
-func parseMessage(message *imapclient.FetchMessageData) (Email, error) {
+func parseMessage(buf *imapclient.FetchMessageBuffer) (Email, error) {
 	var email Email
 
-	env := message.Envelope
-	if env != nil {
-		email.Subject = env.Subject
-		email.Date = env.Date
-		if len(env.From) > 0 {
-			from := env.From[0]
+	if buf.Envelope != nil {
+		email.Subject = buf.Envelope.Subject
+		email.Date = buf.Envelope.Date
+		if len(buf.Envelope.From) > 0 {
+			from := buf.Envelope.From[0]
 			if from.Name != "" {
 				email.Sender = fmt.Sprintf("%s <%s@%s>", from.Name, from.Mailbox, from.Host)
 			} else {
@@ -95,28 +101,24 @@ func parseMessage(message *imapclient.FetchMessageData) (Email, error) {
 		}
 	}
 
-	email.UID = fmt.Sprintf("%d-%s", message.SeqNum, email.Date.Format("20060102"))
+	email.UID = fmt.Sprintf("%d-%s", buf.SeqNum, email.Date.Format("20060102"))
 
-	for {
-		item := message.Next()
-		if item == nil {
-			break
-		}
-		section, ok := item.(imapclient.FetchItemDataBodySection)
-		if !ok {
-			continue
-		}
-		body, err := extractBody(section.Literal)
+	// BodySection is a slice of FetchBodySectionBuffer.
+	// Each entry has a .Data field with the raw bytes.
+	for _, section := range buf.BodySection {
+		body, err := extractBody(bytes.NewReader(section.Bytes))
 		if err != nil {
 			log.Printf("   Error extracting body: %v", err)
+			continue
 		}
-		email.BodySnipet = truncate(body, 500)
+		email.BodySnippet = truncate(body, 500)
 		break
 	}
+
 	return email, nil
 }
 
-func extractBody(read io.reader) (string, error) {
+func extractBody(read io.Reader) (string, error) {
 	entity, err := message.Read(read)
 	if multipartReader := entity.MultipartReader(); multipartReader != nil {
 		var textBody, htmlBody string

@@ -61,25 +61,25 @@ func ClassifyEmails(emails []Email, apiKey string) []Email {
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		log.Printf("❌ Claude API request failed: %v", err)
+		log.Printf("Claude API request failed: %v", err)
 		return emails
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
 		respBody, _ := io.ReadAll(resp.Body)
-		log.Printf("❌ Claude API error %d: %s", resp.StatusCode, string(respBody))
+		log.Printf("Claude API error %d: %s", resp.StatusCode, string(respBody))
 		return emails
 	}
 
 	var result claudeResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		log.Printf("❌ Failed to decode Claude response: %v", err)
+		log.Printf("Failed to decode Claude response: %v", err)
 		return emails
 	}
 
 	if len(result.Content) == 0 {
-		log.Println("❌ Empty response from Claude")
+		log.Println("Empty response from Claude")
 		return emails
 	}
 
@@ -93,8 +93,8 @@ func ClassifyEmails(emails []Email, apiKey string) []Email {
 
 	var classifications []Classification
 	if err := json.Unmarshal([]byte(rawText), &classifications); err != nil {
-		log.Printf("❌ Failed to parse classifications: %v", err)
-		log.Printf("   Raw response: %.500s", rawText)
+		log.Printf("Failed to parse classifications: %v", err)
+		log.Printf("Raw response: %.500s", rawText)
 		return emails
 	}
 
@@ -106,7 +106,7 @@ func ClassifyEmails(emails []Email, apiKey string) []Email {
 		emails[c.Index].Category = c.Category
 		emails[c.Index].Importance = c.Importance
 		emails[c.Index].Summary = c.Summary
-		emails[c.Index].ActionNeeded = c.ActionNeeded
+		emails[c.Index].ActionRequired = c.ActionRequired
 		emails[c.Index].ActionDescription = c.ActionDescription
 		emails[c.Index].Deadline = c.Deadline
 	}
@@ -129,16 +129,16 @@ func buildPrompt(emails []Email) string {
 	sb.WriteString(`- "index": the email number` + "\n")
 	sb.WriteString(fmt.Sprintf(`- "category": one of %s`+"\n", mustJSON(categories)))
 	sb.WriteString(`- "importance": integer 1 (low) to 5 (critical)` + "\n")
-	sb.WriteString(`- "summary": one-sentence summary` + "\n")
+	sb.WriteString(`- "summary": two-sentence summary` + "\n")
 	sb.WriteString(`- "action_needed": true/false` + "\n")
 	sb.WriteString(`- "action_description": what to do (empty string if no action)` + "\n")
 	sb.WriteString(`- "deadline": extracted deadline or null` + "\n\n")
 	sb.WriteString("Return ONLY a JSON array. No markdown fences, no extra text.\n\n")
 	sb.WriteString("EMAILS:\n")
 
-	for i, e := range emails {
+	for i, email := range emails {
 		fmt.Fprintf(&sb, "--- EMAIL %d ---\nFrom: %s\nSubject: %s\nDate: %s\nBody: %s\n\n",
-			i, e.Sender, e.Subject, e.Date.Format(time.RFC3339), e.BodySnippet)
+			i, email.Sender, email.Subject, email.Date.Format(time.RFC3339), email.BodySnippet)
 	}
 	return sb.String()
 }
