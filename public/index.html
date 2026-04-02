@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Email Bot — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg:#0e1117; --surface:#161b22; --border:#21262d;
+    --text:#e6edf3; --muted:#7d8590; --accent:#58a6ff;
+    --urgent:#f85149; --action:#d29922; --finance:#3fb950;
+    --schedule:#a371f7; --news:#79c0ff; --social:#f778ba;
+    --marketing:#ffa657; --other:#7d8590; --radius:10px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+  .container{max-width:1200px;margin:0 auto;padding:2rem 1.5rem}
+
+  header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid var(--border)}
+  header h1{font-size:1.75rem;font-weight:700;letter-spacing:-0.02em}
+  header h1 span{color:var(--accent)}
+  .last-updated{font-size:.8rem;color:var(--muted);font-family:'JetBrains Mono',monospace}
+
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:2rem}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;transition:border-color .2s}
+  .stat-card:hover{border-color:var(--accent)}
+  .stat-card .label{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:.4rem}
+  .stat-card .value{font-size:2rem;font-weight:700;font-family:'JetBrains Mono',monospace}
+  .stat-card.urgent .value{color:var(--urgent)}
+  .stat-card.action .value{color:var(--action)}
+
+  .filters{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1.5rem}
+  .filter-btn{background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:.4rem 1rem;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:.82rem;font-weight:500;cursor:pointer;transition:all .15s}
+  .filter-btn:hover{color:var(--text);border-color:var(--text)}
+  .filter-btn.active{background:var(--accent);color:#000;border-color:var(--accent)}
+
+  .email-list{display:flex;flex-direction:column;gap:.6rem}
+  .email-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;display:grid;grid-template-columns:auto 1fr auto;gap:1rem;align-items:start;transition:border-color .2s,transform .15s;cursor:default}
+  .email-card:hover{border-color:var(--accent);transform:translateY(-1px)}
+
+  .importance-pip{width:10px;height:10px;border-radius:50%;margin-top:6px;flex-shrink:0}
+  .importance-5{background:var(--urgent);box-shadow:0 0 8px var(--urgent)}
+  .importance-4{background:var(--action);box-shadow:0 0 6px var(--action)}
+  .importance-3{background:var(--accent)}
+  .importance-2{background:var(--muted)}
+  .importance-1{background:var(--border)}
+
+  .email-body{min-width:0}
+  .email-subject{font-weight:600;font-size:.95rem;margin-bottom:.25rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .email-summary{font-size:.82rem;color:var(--muted);line-height:1.45;margin-bottom:.4rem}
+  .email-meta{display:flex;gap:.75rem;font-size:.72rem;color:var(--muted);font-family:'JetBrains Mono',monospace}
+
+  .badge{display:inline-block;padding:.15rem .55rem;border-radius:99px;font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+  .badge-urgent{background:#f8514922;color:var(--urgent)}
+  .badge-action{background:#d2992222;color:var(--action)}
+  .badge-finance{background:#3fb95022;color:var(--finance)}
+  .badge-scheduling{background:#a371f722;color:var(--schedule)}
+  .badge-newsletter{background:#79c0ff22;color:var(--news)}
+  .badge-social{background:#f778ba22;color:var(--social)}
+  .badge-marketing{background:#ffa65722;color:var(--marketing)}
+  .badge-other{background:#7d859022;color:var(--other)}
+
+  .email-right{display:flex;flex-direction:column;align-items:flex-end;gap:.5rem;white-space:nowrap}
+  .email-date{font-size:.72rem;color:var(--muted);font-family:'JetBrains Mono',monospace}
+  .action-tag{font-size:.68rem;color:var(--urgent);border:1px solid var(--urgent);padding:.1rem .5rem;border-radius:99px;font-weight:600}
+
+  .empty-state{text-align:center;padding:4rem 1rem;color:var(--muted);font-size:1rem}
+  .empty-state .icon{font-size:3rem;margin-bottom:1rem}
+
+  .action-panel{grid-column:1/-1;background:#1c2128;border-top:1px solid var(--border);margin:.75rem -1.25rem -1rem;padding:.85rem 1.25rem;border-radius:0 0 var(--radius) var(--radius);font-size:.82rem;color:var(--action);display:none}
+  .email-card.expanded .action-panel{display:block}
+
+  @media(max-width:640px){.email-card{grid-template-columns:auto 1fr}.email-right{display:none}}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>📬 Email <span>Bot</span></h1>
+    <div class="last-updated" id="lastUpdated"></div>
+  </header>
+  <section class="stats" id="stats"></section>
+  <section class="filters" id="filters"></section>
+  <section class="email-list" id="emailList">
+    <div class="empty-state">
+      <div class="icon">📭</div>
+      <p>No emails yet. Waiting for the first fetch cycle...</p>
+    </div>
+  </section>
+</div>
+<script>
+let allEmails=[];
+async function load(){
+  try{
+    const[eRes,sRes]=await Promise.all([fetch("/api/emails"),fetch("/api/stats")]);
+    allEmails=await eRes.json();
+    const stats=await sRes.json();
+    renderStats(stats);renderFilters(stats.categories);renderEmails(allEmails);
+    document.getElementById("lastUpdated").textContent="updated "+new Date().toLocaleTimeString();
+  }catch(e){console.error("load failed",e)}
+}
+function renderStats(s){
+  document.getElementById("stats").innerHTML=`
+    <div class="stat-card"><div class="label">Total</div><div class="value">${s.total}</div></div>
+    <div class="stat-card urgent"><div class="label">Important</div><div class="value">${s.important}</div></div>
+    <div class="stat-card action"><div class="label">Action Needed</div><div class="value">${s.action_needed}</div></div>
+    <div class="stat-card"><div class="label">Categories</div><div class="value">${Object.keys(s.categories||{}).length}</div></div>`;
+}
+function renderFilters(cats){
+  const c=document.getElementById("filters");
+  let h=`<button class="filter-btn active" onclick="setFilter(null,this)">All</button>`;
+  for(const k of Object.keys(cats||{}).sort())h+=`<button class="filter-btn" onclick="setFilter('${k}',this)">${k}</button>`;
+  h+=`<button class="filter-btn" onclick="setFilter('__action__',this)">⚡ Action</button>`;
+  c.innerHTML=h;
+}
+function setFilter(cat,btn){
+  document.querySelectorAll(".filter-btn").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  let f=allEmails;
+  if(cat==="__action__")f=allEmails.filter(e=>e.action_needed);
+  else if(cat)f=allEmails.filter(e=>e.category===cat);
+  renderEmails(f);
+}
+function renderEmails(emails){
+  const c=document.getElementById("emailList");
+  if(!emails||!emails.length){c.innerHTML=`<div class="empty-state"><div class="icon">📭</div><p>No emails match this filter.</p></div>`;return}
+  c.innerHTML=emails.map(em=>{
+    const d=new Date(em.date),ds=d.toLocaleDateString("en-GB",{day:"numeric",month:"short"}),
+      ts=d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}),
+      imp=em.importance||1,cat=em.category||"other";
+    return`<div class="email-card" onclick="this.classList.toggle('expanded')">
+      <div class="importance-pip importance-${imp}" title="Importance: ${imp}/5"></div>
+      <div class="email-body">
+        <div class="email-subject">${esc(em.subject||"(no subject)")}</div>
+        <div class="email-summary">${esc(em.summary||em.body_snippet||"")}</div>
+        <div class="email-meta"><span>${esc(em.sender)}</span><span class="badge badge-${cat}">${cat}</span></div>
+      </div>
+      <div class="email-right">
+        <div class="email-date">${ds} ${ts}</div>
+        ${em.action_needed?'<div class="action-tag">ACTION</div>':""}
+      </div>
+      ${em.action_needed?`<div class="action-panel">⚡ <strong>Action:</strong> ${esc(em.action_description||"")}${em.deadline?" — Deadline: "+esc(em.deadline):""}</div>`:""}
+    </div>`}).join("");
+}
+function esc(s){const d=document.createElement("div");d.textContent=s;return d.innerHTML}
+load();setInterval(load,5*60*1000);
+</script>
+</body>
+</html>
