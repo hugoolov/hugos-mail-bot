@@ -20,7 +20,7 @@ func main() {
 	imapFolder := envOr("IMAP_FOLDER", "INBOX")
 	imapPort, _ := strconv.Atoi(envOr("IMAP_PORT", "993"))
 	apiKey := os.Getenv("ANTHROPIC_API_KEY")
-	intervalHours, _ := strconv.ParseFloat(envOr("INTERVAL_HOURS", "4"), 64)
+	intervalHours, _ := strconv.ParseFloat(envOr("INTERVAL_HOURS", "24"), 64)
 	daysBack, _ := strconv.Atoi(envOr("DAYS_BACK", "3"))
 	emailLimit, _ := strconv.Atoi(envOr("EMAIL_LIMIT", "50"))
 	dashPort := envOr("DASH_PORT", "5000")
